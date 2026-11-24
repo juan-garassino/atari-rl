@@ -49,8 +49,8 @@ on:
         description: 'RunPod cloud'
         required: true
         type: choice
-        default: COMMUNITY
-        options: [COMMUNITY, SECURE]
+        default: SECURE  # community hosts are third-party machines; the pod env holds a RunPod key
+        options: [SECURE, COMMUNITY]
       min_vcpu:
         description: 'Minimum vCPUs'
         required: true
@@ -136,5 +136,5 @@ jobs:
             echo "## atari-rl pod"
             echo "- **Pod:** \`$POD_ID\` — **\$$COST/h**"
             echo "- **Run:** \`$RUN_ID\` (game ${{ inputs.game }}, mode ${{ inputs.mode }})"
-            echo "- Health: \`make health RUN_ID=$RUN_ID\`"
+            echo "- Watch: \`make status RUN=$RUN_ID\`"
           } >> "$GITHUB_STEP_SUMMARY"

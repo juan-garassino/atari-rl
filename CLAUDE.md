@@ -19,7 +19,7 @@ two repos' trainer, health monitor, MLflow tracking and runpod/ files in sync by
 | `cli.py` | argparse: `train`, `eval`, `smoke`, `status` |
 
 `runpod/`: `Dockerfile` (CUDA, uv, non-root, CI-built only), `entrypoint.sh` (DONE check → resume pull → pod cost →
-periodic GCS sync → `atari-rl $MODE` → final sync → pod self-terminate), `scripts/pod_self.sh`, `scripts/token_writer.sh`.
+periodic GCS sync → `atari-rl $MODE` → final sync → pod self-terminate; the EXIT trap is set before config checks), `scripts/pod_self.sh` (cost / self-terminate, retried 5× and checked).
 
 ## Env vars
 
@@ -37,6 +37,12 @@ periodic GCS sync → `atari-rl $MODE` → final sync → pod self-terminate), `
   eval wraps `FireOnLifeLoss`. Eval games are also capped at `eval_max_steps` (10k agent steps).
 - No VecMonitor: per-env `Monitor` sits under `AtariWrapper` (SB3 `make_atari_env` convention); adding VecMonitor
   would overwrite its stats with clipped per-life ones.
+- GCS token on the pod lasts 1 h and is not refreshed; anything that must survive goes to MLflow (experiment
+  `mlflow-artifacts:/atari-rl`; `train.run` refuses to start, DONE `mlflow_unavailable`, if MLflow is configured but
+  the upload probe fails). Checkpoints and best_model.zip upload as they are written.
+- Every exit path writes `DONE` (`done|critical|budget|stalled|mlflow_unavailable`) and closes the MLflow run.
+- Eval calls `HealthCallback.heartbeat()` per step so long evals don't trip the 5-min stall watchdog.
+- Torch is pinned to 2.14.1 so the CPU lock and the image's cu126 wheel are the same version.
 - `info["buttons"]` is the one-hot action (from `ActionInfo`) so the shared button-spam health rule works.
 - The training process hosts no emulator (all envs are SubprocVecEnv workers); eval runs one in-process env.
 - Local machine: one heavy job at a time, niced, ≤ 2 envs. Never `docker build` locally.

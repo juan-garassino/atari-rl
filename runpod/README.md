@@ -5,7 +5,7 @@ ale-py ships the Pong and Breakout ROMs inside its wheel, so the pod has no ROM 
 
 ## Launch
 
-GitHub → Actions → **deploy-runpod** → inputs `game` (pong|breakout), `mode` (train), `total_steps`,
+GitHub → Actions → **deploy-runpod** → inputs `game` (pong|breakout), `mode` (train|smoke), `total_steps`,
 `n_envs` (≈ vCPUs), `max_hours`, `max_eur` (or `gh workflow run deploy-runpod.yml -f game=pong`).
 The workflow mints a 1 h GCS token via WIF and creates the pod. GCS is only needed in the first minutes
 (resume state); after that the token may expire — live metrics, health, eval videos, the best model and the final
@@ -18,7 +18,8 @@ checkpoint go through MLflow (`--serve-artifacts`, basic auth).
 3. Reads its own USD/h (`pod_self.sh cost`) → `ATARIRL_COST_PER_HR_USD`; training stops at
    min(`max_hours`, `max_eur` worth of hours). Defaults: Pong 1.5 EUR, Breakout 3.5 EUR, 6 h.
 4. Syncs the run dir to GCS every `SYNC_INTERVAL` (600 s) while the token lasts; failures never stop training.
-5. Runs `atari-rl $MODE`; on any exit: final sync, then `pod_self.sh remove` (billing stops).
+5. Runs `atari-rl $MODE`; on any exit (incl. missing config): final sync, then `pod_self.sh remove`, retried 5×
+   (billing stops). If even that fails, the log says so — remove the pod in the RunPod console.
 
 ## Watch a run
 
