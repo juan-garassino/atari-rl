@@ -1,4 +1,4 @@
-.PHONY: help install test smoke launch status videos play clean
+.PHONY: help install test smoke smoke-scratch cartpole launch status videos play clean
 
 GAME ?=
 
@@ -13,6 +13,12 @@ test:  ## Run tests
 
 smoke:  ## 2-env Pong run, ~2k steps, niced
 	nice -n 19 uv run atari-rl smoke
+
+smoke-scratch:  ## Same smoke run with the from-scratch PPO
+	ATARIRL_ALGO=scratch nice -n 19 uv run atari-rl smoke
+
+cartpole:  ## Scratch PPO sanity check on CartPole-v1 (should reach ~500), niced
+	nice -n 19 uv run atari-rl cartpole
 
 launch:  ## Start a RunPod training pod: make launch GAME=pong|breakout [ARGS="-f n_envs=32"]
 	@if [ -z "$(GAME)" ]; then echo "Usage: make launch GAME=pong|breakout"; exit 1; fi

@@ -61,3 +61,11 @@ def test_budget_from_cost(monkeypatch):
 
 def test_budget_without_cost_uses_max_hours():
     assert Settings(max_hours=2.0).hours_budget == 2.0
+
+
+def test_algo_defaults_to_sb3_and_reads_env(monkeypatch):
+    assert Settings().algo == "sb3"
+    monkeypatch.setenv("ATARIRL_ALGO", "scratch")
+    assert Settings().algo == "scratch"
+    with pytest.raises(ValueError):
+        Settings(algo="dqn")

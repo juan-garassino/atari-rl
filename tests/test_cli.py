@@ -42,3 +42,50 @@ def test_videos_command_is_dispatched(monkeypatch, tmp_path):
     monkeypatch.setattr(status, "fetch_videos", lambda run, dest: called.append((run, dest)) or [])
     assert main(["videos", "pong-1", "--dest", str(tmp_path)]) == 0
     assert called and called[0][0] == "pong-1"
+
+
+def test_algo_override_and_cartpole_subcommand():
+    p = build_parser()
+    assert settings_from_args(p.parse_args(["train", "--algo", "scratch"])).algo == "scratch"
+    args = p.parse_args(["cartpole", "--steps", "1000", "--n-envs", "2"])
+    assert (args.cmd, args.steps, args.n_envs) == ("cartpole", 1000, 2)
+
+
+def test_train_dispatches_on_algo(monkeypatch):
+    from atari_rl import train
+    from atari_rl.cli import main
+    from atari_rl.scratch import trainer
+    from atari_rl.scratch.connectors.atari import AtariConnector
+
+    calls = []
+    monkeypatch.setattr(train, "run", lambda cfg: calls.append(("sb3", cfg.game)) or "done")
+    monkeypatch.setattr(trainer, "run", lambda cfg, connector: calls.append(("scratch", connector)) or "done")
+    assert main(["train", "--game", "breakout"]) == 0
+    monkeypatch.setenv("ATARIRL_ALGO", "scratch")
+    assert main(["train", "--game", "breakout"]) == 0
+    assert calls[0] == ("sb3", "breakout")
+    assert calls[1][0] == "scratch" and calls[1][1] == AtariConnector(game="breakout")
+
+
+def test_eval_loads_scratch_checkpoint(monkeypatch, tmp_path):
+    import torch
+
+    from atari_rl.cli import main
+    from atari_rl.scratch import checkpoint, evaluate
+    from atari_rl.scratch.connectors.atari import AtariConnector
+    from atari_rl.scratch.nets import ActorCritic
+    from atari_rl.scratch.ppo import PPOConfig
+
+    c = AtariConnector(game="breakout")
+    path = checkpoint.save(tmp_path / "best_model.zip", ActorCritic(c.observation_spec, c.n_actions), None,
+                           connector=c, ppo=PPOConfig(), num_timesteps=1, n_updates=0)
+    seen = []
+
+    def fake_eval(agent, connector, episodes, **kw):
+        seen.append((type(agent).__name__, connector.game, episodes, kw["video_path"]))
+        return {"mean_score": 1.0}
+
+    monkeypatch.setattr(evaluate, "run_eval", fake_eval)
+    assert main(["eval", "--model", str(path), "--episodes", "1", "--video", str(tmp_path / "v.mp4")]) == 0
+    assert seen == [("ActorCritic", "breakout", 1, tmp_path / "v.mp4")]  # game taken from the checkpoint
+    assert torch.is_tensor(next(checkpoint.load_agent(path).parameters()))

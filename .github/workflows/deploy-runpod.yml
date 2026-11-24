@@ -18,7 +18,7 @@ on:
         required: true
         type: choice
         default: train
-        options: [train, smoke]
+        options: [train, train-scratch, smoke]  # train-scratch = our own PPO (ATARIRL_ALGO=scratch)
       run_id:
         description: 'Run ID (default: <game>-<timestamp>)'
         required: false
@@ -102,7 +102,8 @@ jobs:
             --arg token "$GCS_ACCESS_TOKEN" --arg api_key "$RUNPOD_API_KEY" \
             --arg ml_user "$MLFLOW_USER" --arg ml_pass "$MLFLOW_PASS" \
             '[
-              {key:"MODE", value:$mode}, {key:"ATARIRL_GAME", value:$game}, {key:"RUN_ID", value:$run_id},
+              {key:"MODE", value:(if $mode == "train-scratch" then "train" else $mode end)},
+              {key:"ATARIRL_ALGO", value:(if $mode == "train-scratch" then "scratch" else "sb3" end)}, {key:"ATARIRL_GAME", value:$game}, {key:"RUN_ID", value:$run_id},
               {key:"ATARIRL_N_ENVS", value:$n_envs}, {key:"ATARIRL_MAX_HOURS", value:$max_hours},
               {key:"GCS_BUCKET", value:"garassino-ml-artifacts"}, {key:"GCS_ACCESS_TOKEN", value:$token},
               {key:"ATARIRL_RUNPOD_API_KEY", value:$api_key},

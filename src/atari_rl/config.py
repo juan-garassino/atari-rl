@@ -8,6 +8,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Game = Literal["pong", "breakout"]
+Algo = Literal["sb3", "scratch"]
 
 _TOTAL_STEPS = {"pong": 3_000_000, "breakout": 10_000_000}
 _MAX_EUR = {"pong": 1.5, "breakout": 3.5}
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ATARIRL_", extra="ignore")
 
     game: Game = "pong"  # ATARIRL_GAME=breakout
+    algo: Algo = "sb3"  # ATARIRL_ALGO=scratch (our own PPO in atari_rl/scratch; sb3 stays default until proven)
     run_id: str = Field(default_factory=_utc_run_id)  # ATARIRL_RUN_ID=20261124-150000
     total_steps: int | None = None  # ATARIRL_TOTAL_STEPS=3000000 (None = per-game default)
     n_envs: int = 16  # ATARIRL_N_ENVS=16

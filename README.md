@@ -23,6 +23,45 @@ make smoke     # 2-env Pong, 2k steps, niced; ~1 min
 make help
 ```
 
+## From-scratch PPO (`ATARIRL_ALGO=scratch`)
+
+`src/atari_rl/scratch/` is our own PPO — plain PyTorch + numpy, no Stable-Baselines3 — written to be read
+on camera: one responsibility per file, every formula commented. It honours the same contract as the SB3 path
+(run dir, checkpoints, DONE, budget, `health.json`, MLflow metric names), so `status`, `videos` and `play` work
+unchanged. SB3 stays the default until scratch matches it on a paid Pong probe.
+
+```
+connectors/   the only console-specific code (Atari now; Genesis / Game Boy later)
+  base.py       Connector protocol + observation spec (dict of image / vector inputs)
+  atari.py      ALE env, eval scoring, win definition      atari_wrappers.py  hand-written Atari preprocessing
+  cartpole.py   sanity-check connector
+nets.py       actor-critic built from the obs spec (NatureCNN / MLP per input, concatenated)
+vec_env.py    subprocess envs + batched frame stacking
+rollout.py    play n_steps in every env → buffer
+buffer.py     rollout storage + GAE(λ) (terminated vs truncated)
+ppo.py        clipped surrogate, value loss, entropy bonus, minibatch epochs
+trainer.py    the run loop (checkpoints, eval, health, budget, MLflow)
+cartpole.py   the whole PPO loop on one screen
+```
+
+```bash
+make cartpole                                    # sanity check: solves CartPole-v1 (500/500) in ~30k steps
+make smoke-scratch                               # 2-env Pong smoke through the full run contract
+ATARIRL_ALGO=scratch uv run atari-rl train       # or --algo scratch
+uv run atari-rl eval --model runs/<id>/best_model.zip --episodes 1 --video play.mp4   # SB3 or scratch zip
+```
+
+Validation so far (laptop, 2026-11-24, nice 19 under heavy external load):
+- Atari preprocessing: frame- and reward-identical to SB3's `AtariWrapper` on Pong and Breakout (test).
+- CartPole-v1 (rl-zoo config, 4 envs): greedy eval 500/500 on seeds 1 and 2, solved (last-20 mean ≥ 475) at
+  ~26–28k steps; ~190 s for the full 100k. With CleanRL's untuned defaults the curve matched SB3 run with the same
+  settings (differential check).
+- Pong, 2 envs: scratch ≈ SB3 fps (~15 fps each here — the laptop was CPU-starved; compare on the pod).
+- Still open: the paid Pong probe (train score trend ≥ SB3's −20.1 → −18.6 by ~490k).
+
+Scratch checkpoints are zips with `meta.json` + `model.pt` + `optimizer.pt` (same file names as SB3's, told apart
+by `meta.json`). Hyper-parameters: `ATARIRL_PARAMS_FILE` with `PPOConfig` field names (e.g. `{"n_minibatches": 8}`).
+
 ## Train on RunPod
 
 The image is built by CI only (`runpod/Dockerfile`, never locally). Launch via the **deploy-runpod** GitHub
