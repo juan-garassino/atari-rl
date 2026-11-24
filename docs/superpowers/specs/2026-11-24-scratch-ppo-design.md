@@ -38,3 +38,12 @@ events/map/recent_actions → MLP/embedding; concatenated trunk). Resume is not 
 ## Defaults (CleanRL / SB3-zoo Atari PPO)
 n_envs 16, n_steps 128, minibatches 4, epochs 4, lr 2.5e-4 linear, clip 0.1 linear, γ 0.99, λ 0.95,
 ent 0.01, vf 0.5, max_grad_norm 0.5, orthogonal init (√2 trunk, 0.01 policy head, 1 value head), obs/255.
+
+## Phase 3 — all connectors proven (Juan: "try with a bit of gameboy and sega as well ... to know the connectors work")
+Home: `~/Code/005-products/033-rl-arcade` (core + `connectors/{atari,genesis,gameboy}`).
+Each connector gets a short paid probe (~€0.50–1, CPU pod) with a video:
+- atari: Pong — train score trend ≥ SB3 probe.
+- genesis: Sonic Green Hill 1 (stall termination, 7 contest actions) — eval level progress rises (SB3 reached 54% by 369k);
+  SF via the 21-move set once sega-rl's SF v2 shows learning.
+- gameboy: Pokémon from has_pokedex_nballs.state, dict obs (screens CNN + vector MLP) — explore reward / visited map
+  tiles rise; replay video via play.
