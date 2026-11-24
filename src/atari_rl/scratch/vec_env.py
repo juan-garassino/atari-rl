@@ -31,7 +31,7 @@ Obs = dict[str, np.ndarray]
 StepResult = tuple[Obs, np.ndarray, np.ndarray, np.ndarray, list[dict[str, Any]]]
 
 
-def _stack(obs_list: Sequence[dict[str, np.ndarray]]) -> Obs:
+def stack_obs(obs_list: Sequence[dict[str, np.ndarray]]) -> Obs:
     """List of per-env dict obs → one dict of (N, ...) arrays."""
     return {k: np.stack([o[k] for o in obs_list]) for k in obs_list[0]}
 
@@ -81,14 +81,14 @@ class SubprocVecEnv:
     def reset(self, seed: int | None = None) -> Obs:
         for i, remote in enumerate(self.remotes):
             remote.send(("reset", None if seed is None else seed + i))
-        return _stack([remote.recv()[0] for remote in self.remotes])
+        return stack_obs([remote.recv()[0] for remote in self.remotes])
 
     def step(self, actions: np.ndarray) -> StepResult:
         for remote, action in zip(self.remotes, actions):
             remote.send(("step", action))
         results = [remote.recv() for remote in self.remotes]  # all envs step in parallel; we wait for all
         obs, rewards, terminated, truncated, infos = zip(*results)
-        return (_stack(obs), np.asarray(rewards, np.float32), np.asarray(terminated, bool),
+        return (stack_obs(obs), np.asarray(rewards, np.float32), np.asarray(terminated, bool),
                 np.asarray(truncated, bool), list(infos))
 
     def close(self) -> None:
@@ -114,11 +114,11 @@ class InProcessVecEnv:
         self.num_envs = len(self.envs)
 
     def reset(self, seed: int | None = None) -> Obs:
-        return _stack([env.reset(seed=None if seed is None else seed + i)[0] for i, env in enumerate(self.envs)])
+        return stack_obs([env.reset(seed=None if seed is None else seed + i)[0] for i, env in enumerate(self.envs)])
 
     def step(self, actions: np.ndarray) -> StepResult:
         obs, rewards, terminated, truncated, infos = zip(*(_step_and_autoreset(e, a) for e, a in zip(self.envs, actions)))
-        return (_stack(obs), np.asarray(rewards, np.float32), np.asarray(terminated, bool),
+        return (stack_obs(obs), np.asarray(rewards, np.float32), np.asarray(terminated, bool),
                 np.asarray(truncated, bool), list(infos))
 
     def close(self) -> None:

@@ -85,6 +85,7 @@ class AtariConnector:
             "mean_length": float(np.mean([e["length"] for e in episodes])),  # agent steps per game
             "target_reached": float(mean >= TARGET_SCORE[self.game]),
             "win_rate": float(np.mean([_won(self.game, s) for s in scores])),
+            "target": TARGET_SCORE[self.game],  # constant; kept so best.json says what "solved" means
         }
 
     def best_key(self, metrics: dict[str, float]) -> tuple[float, ...]:
