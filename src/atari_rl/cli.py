@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
     ev.add_argument("--episodes", type=int, default=5)
     ev.add_argument("--video", type=Path)
     sub.add_parser("smoke", help="2-env Pong run, ~2k steps, in a temp dir")
+    st = sub.add_parser("status", help="live run state from MLflow (health, eval, fps)")
+    st.add_argument("run_name", help="run id = MLflow run name, e.g. pong-20261124-180000")
     return p
 
 
@@ -64,8 +66,15 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
     return 0 if status == "done" else 2
 
 
+def _cmd_status(args: argparse.Namespace) -> int:
+    from atari_rl.status import fetch
+
+    print(fetch(args.run_name))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     args = build_parser().parse_args(argv)
-    handlers = {"train": _cmd_train, "eval": _cmd_eval, "smoke": _cmd_smoke}
+    handlers = {"train": _cmd_train, "eval": _cmd_eval, "smoke": _cmd_smoke, "status": _cmd_status}
     return handlers[args.cmd](args)

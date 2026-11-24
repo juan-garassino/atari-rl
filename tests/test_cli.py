@@ -26,3 +26,8 @@ def test_subcommands():
         p.parse_args(["tune"])
     with pytest.raises(SystemExit):
         p.parse_args(["train", "--game", "sf"])
+
+
+def test_status_subcommand():
+    args = build_parser().parse_args(["status", "pong-20261124-180000"])
+    assert (args.cmd, args.run_name) == ("status", "pong-20261124-180000")

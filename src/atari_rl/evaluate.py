@@ -12,6 +12,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
 from atari_rl.config import Settings
 from atari_rl.envs.factory import make_single
+from atari_rl.monitoring import mlflow_tracking
 from atari_rl.monitoring.video import write_mp4
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,8 @@ class EvalCallback(BaseCallback):
         self.next_eval = (steps // self.cfg.eval_freq + 1) * self.cfg.eval_freq
         video = self.run_dir / "videos" / f"eval_{steps:010d}.mp4"
         result = self.eval_fn(self.model, self.cfg, self.cfg.eval_episodes, video_path=video)
+        if video.exists():
+            mlflow_tracking.log_artifact(video, "videos")
         for k, v in asdict(result).items():
             self.logger.record(f"eval/{k}", v)
         key = score(result)
@@ -92,4 +95,5 @@ class EvalCallback(BaseCallback):
             self.model.save(self.run_dir / "best_model.zip")
             (self.run_dir / "best.json").write_text(
                 json.dumps({"step": steps, "target": self.cfg.target_score, **asdict(result)}, default=float))
+            mlflow_tracking.log_artifact(self.run_dir / "best.json")
         return True
