@@ -20,7 +20,13 @@ of the learning loop to be ours, explainable on video, and tunable (CNN, losses,
 
 ## Non-goals
 - Rewriting emulators; dropping gymnasium; other algorithms (DQN etc.); GPU-specific tricks.
-- Porting to sega-rl / gameboy-rl (next step, after Pong proves it).
+- sega-rl (later, optional).
+
+## Phase 2 — Pokémon (Juan: "for at least the pokemon and the atari")
+After Pong proves the core: copy `scratch/` into gameboy-rl (workspace convention: copy, no shared package) and
+add a multi-input actor-critic for PWhiddy v2's dict observation (screens 3×72×80 → CNN; health/level/badges/
+events/map/recent_actions → MLP/embedding; concatenated trunk). Resume is not possible from the SB3 checkpoint
+(different parameter layout) — the scratch Pokémon run starts fresh from `has_pokedex_nballs.state`.
 
 ## Correctness bar (before any paid run)
 - Unit tests: GAE matches a hand-computed reference incl. episode boundaries and truncation bootstrap;
