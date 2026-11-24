@@ -23,15 +23,15 @@ log() { echo "=== $* ==="; }
 gcs() {
     local token_file="${WORKSPACE_DIR}/control/gcs_token"
     if [ -s "$token_file" ]; then
-        CLOUDSDK_AUTH_ACCESS_TOKEN="$(cat "$token_file")" timeout "$GCS_TIMEOUT" gsutil "$@"
+        CLOUDSDK_AUTH_ACCESS_TOKEN="$(cat "$token_file")" timeout "$GCS_TIMEOUT" gcloud storage "$@"
     else
-        timeout "$GCS_TIMEOUT" gsutil "$@"
+        timeout "$GCS_TIMEOUT" gcloud storage "$@"
     fi
 }
 
 sync_up() {
     [ "$SYNC_ENABLED" = 1 ] || return 0
-    gcs -m -q rsync -r "$RUN_DIR" "${GCS_ROOT}/runs/${RUN_ID}" || log "sync to GCS failed (token expired? MLflow has the artifacts)"
+    gcs rsync --recursive "$RUN_DIR" "${GCS_ROOT}/runs/${RUN_ID}" || log "sync to GCS failed (token expired? MLflow has the artifacts)"
 }
 
 finish() {
@@ -66,7 +66,7 @@ DONE_STATUS="$(gcs cat "${GCS_ROOT}/runs/${RUN_ID}/DONE" 2>/dev/null || true)"
 if [ "$DONE_STATUS" = budget ]; then
     # Probe-then-extend: a run stopped by its budget cap resumes from its last checkpoint.
     log "extending run ${RUN_ID} (stopped on budget)"
-    gcs -q rm "${GCS_ROOT}/runs/${RUN_ID}/DONE" || true
+    gcs rm "${GCS_ROOT}/runs/${RUN_ID}/DONE" || true
 elif [ -n "$DONE_STATUS" ]; then
     log "run ${RUN_ID} already finished (${DONE_STATUS}), nothing to do"
     exit 0
@@ -74,7 +74,7 @@ fi
 SYNC_ENABLED=1
 
 log "pulling run dir (resume)"
-gcs -m -q rsync -r "${GCS_ROOT}/runs/${RUN_ID}" "$RUN_DIR" 2>/dev/null || log "no prior state, fresh run"
+gcs rsync --recursive "${GCS_ROOT}/runs/${RUN_ID}" "$RUN_DIR" 2>/dev/null || log "no prior state, fresh run"
 rm -f "${RUN_DIR}/DONE"
 
 ATARIRL_COST_PER_HR_USD="$(bash "$POD_SELF" cost)"
