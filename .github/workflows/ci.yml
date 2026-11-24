@@ -31,7 +31,7 @@ jobs:
       - run: >
           uv run python -c "import atari_rl.cli, atari_rl.train, atari_rl.evaluate,
           atari_rl.monitoring.health, atari_rl.monitoring.mlflow_tracking, atari_rl.envs.factory, atari_rl.envs.atari, atari_rl.status"
-      - run: bash -n runpod/entrypoint.sh && bash -n runpod/scripts/pod_self.sh && bash -n runpod/scripts/token_writer.sh
+      - run: bash -n runpod/entrypoint.sh && bash -n runpod/scripts/pod_self.sh
 
   mlflow-auth:
     # Proves the MLflow secrets work (401 = wrong/empty credentials) before any paid pod relies on them.
