@@ -49,7 +49,7 @@ def test_eval_callback_uploads_video_and_best(tmp_path, monkeypatch):
     rec = _Rec()
     monkeypatch.setattr(mlflow_tracking, "log_artifact", rec.log_artifact)
 
-    def fake_eval(model, cfg, episodes, video_path=None):
+    def fake_eval(model, cfg, episodes, video_path=None, heartbeat=None):
         video_path.parent.mkdir(parents=True, exist_ok=True)
         video_path.write_bytes(b"mp4")
         return EvalResult(mean_score=3.0, std_score=0.0, max_score=3.0, mean_length=10.0, target_reached=0.0)
@@ -85,6 +85,9 @@ class _FakeMlflow:
     def __init__(self, fail_start):
         self.fail_start = fail_start
         self.calls = []
+
+    def get_experiment_by_name(self, name):
+        return object()
 
     def set_tracking_uri(self, uri):
         self.calls.append("uri")
@@ -129,4 +132,46 @@ def test_successful_start_enables_logging(monkeypatch):
     mlflow_tracking.log_metrics({"a": 1.0}, step=1)
     mlflow_tracking.end("done")
     assert fake.calls.count("metrics") == 1 and "end" in fake.calls
+    assert mlflow_tracking._active is False
+
+
+class _ExpFakeMlflow(_FakeMlflow):
+    def __init__(self, fail_artifact=False):
+        super().__init__(fail_start=False)
+        self.fail_artifact = fail_artifact
+        self.created = None
+
+    def get_experiment_by_name(self, name):
+        return None
+
+    def create_experiment(self, name, artifact_location=None):
+        self.created = (name, artifact_location)
+
+    def log_artifact(self, path, artifact_path=None):
+        if self.fail_artifact:
+            raise RuntimeError("upload failed")
+        self.calls.append("artifact")
+
+
+def test_start_creates_experiment_with_proxied_artifacts(monkeypatch, tmp_path):
+    fake = _ExpFakeMlflow()
+    monkeypatch.setitem(__import__("sys").modules, "mlflow", fake)
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://x")
+    monkeypatch.setattr(mlflow_tracking, "_active", False)
+    probe = tmp_path / "config.json"
+    probe.write_text("{}")
+    assert mlflow_tracking.start(Settings(), probe=probe) is True
+    assert fake.created == ("atari-rl", "mlflow-artifacts:/atari-rl")
+    assert "artifact" in fake.calls
+    mlflow_tracking.end("done")
+
+
+def test_start_returns_false_when_probe_upload_fails(monkeypatch, tmp_path):
+    fake = _ExpFakeMlflow(fail_artifact=True)
+    monkeypatch.setitem(__import__("sys").modules, "mlflow", fake)
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://x")
+    monkeypatch.setattr(mlflow_tracking, "_active", False)
+    probe = tmp_path / "config.json"
+    probe.write_text("{}")
+    assert mlflow_tracking.start(Settings(), probe=probe) is False
     assert mlflow_tracking._active is False

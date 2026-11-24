@@ -84,3 +84,33 @@ def test_best_model_selection(tmp_path):
     best = json.loads((tmp_path / "best.json").read_text())
     assert best["step"] == 300 and best["mean_score"] == 19.0 and best["target"] == 18.0
     assert model.logger.records["eval/mean_score"] == 19.0
+
+
+def test_eval_heartbeat_called_per_step():
+    beats = []
+    run_eval(_RandomModel(Discrete(6)), Settings(game="pong"), episodes=1, max_steps=20,
+             heartbeat=lambda: beats.append(1))
+    assert len(beats) >= 20
+
+
+def test_best_restored_on_resume(tmp_path):
+    (tmp_path / "best.json").write_text(json.dumps({"step": 1, "target": 18.0, **vars(_result(10.0))}))
+    results = iter([_result(4.0)])
+    cb = EvalCallback(Settings(game="pong", eval_freq=100), tmp_path, eval_fn=lambda *a, **k: next(results))
+    model = _RandomModel(Discrete(6))
+    cb.init_callback(model)
+    model.num_timesteps = 100
+    cb.on_step()
+    assert model.saved == []
+
+
+def test_best_model_uploaded_on_improvement(tmp_path, monkeypatch):
+    uploads = []
+    monkeypatch.setattr(mlflow_tracking, "log_artifact", lambda p, a=None: uploads.append(str(p)))
+    results = iter([_result(2.0)])
+    cb = EvalCallback(Settings(game="pong", eval_freq=100), tmp_path, eval_fn=lambda *a, **k: next(results))
+    model = _RandomModel(Discrete(6))
+    cb.init_callback(model)
+    model.num_timesteps = 100
+    cb.on_step()
+    assert any(u.endswith("best_model.zip") for u in uploads)
