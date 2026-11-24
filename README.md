@@ -51,6 +51,14 @@ ATARIRL_ALGO=scratch uv run atari-rl train       # or --algo scratch
 uv run atari-rl eval --model runs/<id>/best_model.zip --episodes 1 --video play.mp4   # SB3 or scratch zip
 ```
 
+Validation so far (laptop, 2026-11-24, nice 19 under heavy external load):
+- Atari preprocessing: frame- and reward-identical to SB3's `AtariWrapper` on Pong and Breakout (test).
+- CartPole-v1 (rl-zoo config, 4 envs): greedy eval 500/500 on seeds 1 and 2, solved (last-20 mean ≥ 475) at
+  ~26–28k steps; ~190 s for the full 100k. With CleanRL's untuned defaults the curve matched SB3 run with the same
+  settings (differential check).
+- Pong, 2 envs: scratch ≈ SB3 fps (~15 fps each here — the laptop was CPU-starved; compare on the pod).
+- Still open: the paid Pong probe (train score trend ≥ SB3's −20.1 → −18.6 by ~490k).
+
 Scratch checkpoints are zips with `meta.json` + `model.pt` + `optimizer.pt` (same file names as SB3's, told apart
 by `meta.json`). Hyper-parameters: `ATARIRL_PARAMS_FILE` with `PPOConfig` field names (e.g. `{"n_minibatches": 8}`).
 

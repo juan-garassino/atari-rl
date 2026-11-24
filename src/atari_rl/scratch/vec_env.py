@@ -12,7 +12,8 @@ info["final_obs"] (needed to bootstrap a truncated episode, see buffer.py).
 
 Frame stacking runs in the main process on the whole batch: workers send one 84×84 frame, not four.
 Env factories must be picklable (use functools.partial over module-level callables): workers start with
-"forkserver", which is safe next to torch's threads.
+"forkserver", which is safe next to torch's threads. Workers import the main module, so a script that builds a
+SubprocVecEnv must keep its work under `if __name__ == "__main__":` (the `atari-rl` CLI already does).
 """
 from __future__ import annotations
 

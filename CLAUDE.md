@@ -79,4 +79,6 @@ not `batch_size`), `ATARIRL_ALGO` (sb3|scratch, default sb3); every field is doc
   (scratch zips have `meta.json`) and, for scratch, takes the game from the checkpoint when `--game` is omitted.
 - Scratch clip range anneals linearly (design default); the SB3 path keeps a constant 0.1. Scratch minibatch =
   n_envs·n_steps/4 (512 at 16 envs) vs SB3 256.
+- Scripts that start scratch subprocess envs need an `if __name__ == "__main__":` guard (forkserver re-imports
+  `__main__` in every worker; without it each worker re-runs the script).
 - `deploy-runpod.yml` has no `algo` input yet: a scratch pod run needs `ATARIRL_ALGO=scratch` added to the pod env.
