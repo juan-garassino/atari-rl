@@ -13,6 +13,11 @@ class _StubClient:
         return [type("R", (), {"info": info})()]
 
     def download_artifacts(self, run_id, path, dst_path):
+        if path == "best_model.zip":
+            out = self.tmp / "dl" / "best_model.zip"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(b"model")
+            return str(out)
         out = self.tmp / "dl" / path
         out.mkdir(parents=True, exist_ok=True)
         (out / "eval_0000250000.mp4").write_bytes(b"x")
@@ -26,4 +31,5 @@ def test_fetch_videos_copies_new_files(tmp_path):
     got = fetch_videos("pong-1", dest, client=_StubClient(tmp_path))
     assert [p.name for p in got] == ["eval_0000250000.mp4"]
     assert (dest / "pong-1" / "eval_0000250000.mp4").exists()
+    assert (dest / "pong-1" / "best_model.zip").read_bytes() == b"model"
     assert fetch_videos("pong-1", dest, client=_StubClient(tmp_path)) == []  # already downloaded

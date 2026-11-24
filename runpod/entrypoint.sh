@@ -62,14 +62,20 @@ if [ -n "${GCS_ACCESS_TOKEN:-}" ]; then
     (umask 077 && printf '%s' "$GCS_ACCESS_TOKEN" > "${WORKSPACE_DIR}/control/gcs_token")
 fi
 
-if gcs -q stat "${GCS_ROOT}/runs/${RUN_ID}/DONE" 2>/dev/null; then
-    log "run ${RUN_ID} already DONE, nothing to do"
+DONE_STATUS="$(gcs cat "${GCS_ROOT}/runs/${RUN_ID}/DONE" 2>/dev/null || true)"
+if [ "$DONE_STATUS" = budget ]; then
+    # Probe-then-extend: a run stopped by its budget cap resumes from its last checkpoint.
+    log "extending run ${RUN_ID} (stopped on budget)"
+    gcs -q rm "${GCS_ROOT}/runs/${RUN_ID}/DONE" || true
+elif [ -n "$DONE_STATUS" ]; then
+    log "run ${RUN_ID} already finished (${DONE_STATUS}), nothing to do"
     exit 0
 fi
 SYNC_ENABLED=1
 
 log "pulling run dir (resume)"
 gcs -m -q rsync -r "${GCS_ROOT}/runs/${RUN_ID}" "$RUN_DIR" 2>/dev/null || log "no prior state, fresh run"
+rm -f "${RUN_DIR}/DONE"
 
 ATARIRL_COST_PER_HR_USD="$(bash "$POD_SELF" cost)"
 export ATARIRL_COST_PER_HR_USD

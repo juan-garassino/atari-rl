@@ -31,3 +31,14 @@ def test_subcommands():
 def test_status_subcommand():
     args = build_parser().parse_args(["status", "pong-20261124-180000"])
     assert (args.cmd, args.run_name) == ("status", "pong-20261124-180000")
+
+
+def test_videos_command_is_dispatched(monkeypatch, tmp_path):
+    import atari_rl.status as status
+
+    from atari_rl.cli import main
+
+    called = []
+    monkeypatch.setattr(status, "fetch_videos", lambda run, dest: called.append((run, dest)) or [])
+    assert main(["videos", "pong-1", "--dest", str(tmp_path)]) == 0
+    assert called and called[0][0] == "pong-1"

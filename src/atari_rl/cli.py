@@ -89,5 +89,5 @@ def _cmd_videos(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     args = build_parser().parse_args(argv)
-    handlers = {"train": _cmd_train, "eval": _cmd_eval, "smoke": _cmd_smoke, "status": _cmd_status}
+    handlers = {"train": _cmd_train, "eval": _cmd_eval, "smoke": _cmd_smoke, "status": _cmd_status, "videos": _cmd_videos}
     return handlers[args.cmd](args)
