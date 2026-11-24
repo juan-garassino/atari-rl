@@ -29,6 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("smoke", help="2-env Pong run, ~2k steps, in a temp dir")
     st = sub.add_parser("status", help="live run state from MLflow (health, eval, fps)")
     st.add_argument("run_name", help="run id = MLflow run name, e.g. pong-20261124-180000")
+    vid = sub.add_parser("videos", help="download a run's eval replay videos from MLflow")
+    vid.add_argument("run_name")
+    vid.add_argument("--dest", type=Path, default=Path.home() / "Videos" / "rl-series")
     return p
 
 
@@ -70,6 +73,16 @@ def _cmd_status(args: argparse.Namespace) -> int:
     from atari_rl.status import fetch
 
     print(fetch(args.run_name))
+    return 0
+
+
+def _cmd_videos(args: argparse.Namespace) -> int:
+    from atari_rl.status import fetch_videos
+
+    new = fetch_videos(args.run_name, args.dest)
+    print(f"{len(new)} new video(s) in {args.dest / args.run_name}")
+    for p in new:
+        print(f"  {p}")
     return 0
 
 

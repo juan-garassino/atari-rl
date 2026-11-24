@@ -1,4 +1,4 @@
-.PHONY: help install test smoke launch status clean
+.PHONY: help install test smoke launch status videos clean
 
 GAME ?=
 
@@ -21,6 +21,10 @@ launch:  ## Start a RunPod training pod: make launch GAME=pong|breakout [ARGS="-
 status:  ## Live run state from MLflow: make status RUN=pong-20261124-180000
 	@if [ -z "$(RUN)" ]; then echo "Usage: make status RUN=<run id>"; exit 1; fi
 	@uv run atari-rl status $(RUN) 2>/dev/null
+
+videos:  ## Download a run's eval replays to ~/Videos/rl-series/<run>: make videos RUN=pong-20261124-180000
+	@if [ -z "$(RUN)" ]; then echo "Usage: make videos RUN=<run id>"; exit 1; fi
+	@uv run atari-rl videos $(RUN)
 
 clean:  ## Remove caches and local runs
 	rm -rf .pytest_cache runs **/__pycache__
