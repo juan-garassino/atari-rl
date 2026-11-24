@@ -79,6 +79,11 @@ class ObsEncoder(nn.Module):
         return torch.cat([self.encoders[k](obs[k]) for k in self.keys], dim=-1)
 
 
+def _dist(logits: torch.Tensor) -> Categorical:
+    # validate_args=False: argument checks cost more than the tiny MLP forward pass on every env step
+    return Categorical(logits=logits, validate_args=False)
+
+
 class ActorCritic(nn.Module):
     def __init__(self, spec: ObsSpec, n_actions: int, share_encoder: bool = True):
         super().__init__()
@@ -99,7 +104,7 @@ class ActorCritic(nn.Module):
     def act(self, obs: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Rollout time: sample a ~ π(·|s). Returns (action, log π(a|s), V(s))."""
         logits, value = self(obs)
-        dist = Categorical(logits=logits)
+        dist = _dist(logits)
         action = dist.sample()
         return action, dist.log_prob(action), value
 
@@ -107,14 +112,14 @@ class ActorCritic(nn.Module):
                  ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Update time: re-score the stored actions under the current weights. (log π(a|s), entropy, V(s))."""
         logits, value = self(obs)
-        dist = Categorical(logits=logits)
+        dist = _dist(logits)
         return dist.log_prob(actions), dist.entropy(), value
 
     @torch.no_grad()
     def predict(self, obs: dict[str, np.ndarray], deterministic: bool = True) -> np.ndarray:
         """Numpy in, numpy actions out (eval / play). Deterministic = the most likely action."""
         logits, _ = self(obs_to_tensor(obs, next(self.parameters()).device))
-        actions = logits.argmax(-1) if deterministic else Categorical(logits=logits).sample()
+        actions = logits.argmax(-1) if deterministic else _dist(logits).sample()
         return actions.cpu().numpy()
 
 

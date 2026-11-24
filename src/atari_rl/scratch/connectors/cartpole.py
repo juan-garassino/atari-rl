@@ -22,8 +22,12 @@ class CartPoleConnector:
     n_actions: int = 2
     frame_stack: int = 1
     share_encoder: bool = False  # separate actor/critic MLPs, as in CleanRL's ppo.py
-    # CleanRL ppo.py defaults where they differ from the Atari ones in PPOConfig.
-    ppo_overrides: dict[str, Any] = field(default_factory=lambda: {"clip_range": 0.2, "anneal_clip": False})
+    # rl-zoo's tuned PPO CartPole-v1 config (8 envs × 32 steps there; 4 × 64 here = the same 256-sample batch).
+    # CleanRL's untuned defaults (lr 2.5e-4, ent 0.01) also learn — the curve matched SB3 with the same settings —
+    # but plateau noisily around 300-400 training return; this config solves CartPole in ~100k steps.
+    ppo_overrides: dict[str, Any] = field(default_factory=lambda: {
+        "n_steps": 64, "n_minibatches": 1, "n_epochs": 20, "learning_rate": 1e-3, "clip_range": 0.2,
+        "ent_coef": 0.0, "gamma": 0.98, "gae_lambda": 0.8})
 
     @property
     def observation_spec(self) -> ObsSpec:
