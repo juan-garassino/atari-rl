@@ -141,3 +141,10 @@ def test_stall_handler_writes_done_and_reports(tmp_path, monkeypatch):
     train._stall_handler(tmp_path)(HealthReport("CRITICAL", ["stalled"]))
     assert (tmp_path / "DONE").read_text() == "stalled"
     assert tags["health_status"] == "CRITICAL" and ends == ["stalled"] and exits == [3]
+
+
+def test_torch_threads_leave_cores_for_envs():
+    from atari_rl.train import torch_threads
+
+    assert torch_threads(cpu_count=32, n_envs=16) == 16
+    assert torch_threads(cpu_count=8, n_envs=16) == 2
